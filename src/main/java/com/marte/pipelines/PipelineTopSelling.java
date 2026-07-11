@@ -9,7 +9,7 @@ public class PipelineTopSelling {
 
     //Return all names of videogames with sales > 80
     public static Flux<String> getTopSalesVideogames(){
-        return Database.getVideogamesFlux()
+        return Database.getDataAsFlux()
                 .filter(videogame -> videogame.getTotalSold() > 80)
                 .map(Videogame::getName);
     }

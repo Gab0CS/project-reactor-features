@@ -11,7 +11,8 @@ import java.util.List;
 
 public class Database {
 
-    public static Flux<Videogame> getVideogamesFlux() {
+    public static Flux<Videogame> getDataAsFlux() {
+
         List<Videogame> videogames = Arrays.asList(
 
 
@@ -47,7 +48,7 @@ public class Database {
                 Videogame.builder()
                         .name("Assassin's Creed Origins")
                         .price(15.55)
-                        .console(Console.ALL)
+                        .console(Console.DISABLED)
                         .reviews(List.of(
                                 new Review("Ambientación en Egipto espectacular", 5)
                         ))
@@ -59,7 +60,7 @@ public class Database {
                 Videogame.builder()
                         .name("Assassin's Creed Odyssey")
                         .price(15.55)
-                        .console(Console.ALL)
+                        .console(Console.DISABLED)
                         .reviews(List.of(
                                 new Review("Entorno griego inmersivo", 5),
                                 new Review("Historia extensa", 5),
@@ -73,7 +74,7 @@ public class Database {
                 Videogame.builder()
                         .name("Assassin's Creed Valhalla")
                         .price(30.33)
-                        .console(Console.ALL)
+                        .console(Console.DISABLED)
                         .reviews(List.of(
                                 new Review("Gran mejora en el sistema de combate", 4),
                                 new Review("La ambientación vikinga es genial", 3),
@@ -244,7 +245,7 @@ public class Database {
 
                 Videogame.builder()
                         .name("Candy Crush")
-                        .price(81.4)
+                        .price(0.0)
                         .console(Console.MOBILE)
                         .reviews(List.of(
                                 new Review("Entretenido pero repetitivo", 4),
@@ -255,7 +256,7 @@ public class Database {
                                 new Review("Aún así, engancha", 4)
                         ))
                         .officialWebsite("https://www.candycrushsaga.com")
-                        .isDiscount(true)
+                        .isDiscount(false)
                         .totalSold(2200)
                         .build(),
 
@@ -408,4 +409,44 @@ public class Database {
 
         return Flux.fromIterable(videogames);
     }
+
+
+    public static Flux<Videogame> fluxAssassinsDefault = Flux.just(
+            Videogame.builder()
+                    .name("Assassin's Creed Origins (V2)")
+                    .price(19.99)
+                    .console(Console.ALL)
+                    .build(),
+            Videogame.builder()
+                    .name("Assassin's Creed Odyssey (V2)")
+                    .price(19.99)
+                    .console(Console.ALL)
+                    .build(),
+            Videogame.builder()
+                    .name("Assassin's Creed Valhalla (V2)")
+                    .price(29.99)
+                    .console(Console.ALL)
+                    .build()
+    );
+
+
+    //DB For fallback :)
+    public static Flux<Videogame> fluxFallback = Flux.just(
+            Videogame.builder()
+                    .name("Fallback data 1")
+                    .price(19.99)
+                    .console(Console.ALL)
+                    .build(),
+            Videogame.builder()
+                    .name("Fallback data 2")
+                    .price(19.99)
+                    .console(Console.ALL)
+                    .build(),
+            Videogame.builder()
+                    .name("Fallback data 3")
+                    .price(29.99)
+                    .console(Console.ALL)
+                    .build()
+    );
+
 }

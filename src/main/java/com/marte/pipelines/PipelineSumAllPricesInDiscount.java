@@ -7,7 +7,7 @@ import reactor.core.publisher.Mono;
 public class PipelineSumAllPricesInDiscount {
 
     public static Mono<Double> getSumAllPricesInDiscount(){
-        return Database.getVideogamesFlux()
+        return Database.getDataAsFlux()
                 .filter(videogame -> !videogame.getIsDiscount())
                 .map(Videogame::getPrice)
                 .reduce(0.0, Double::sum);
