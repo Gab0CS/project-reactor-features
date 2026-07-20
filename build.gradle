@@ -5,6 +5,12 @@ plugins {
 group = 'com.marte'
 version = '1.0-SNAPSHOT'
 
+configurations {
+    mockitoAgent{
+        transitive = false;
+    }
+}
+
 repositories {
     mavenCentral()
 }
@@ -16,8 +22,12 @@ dependencies {
     compileOnly("org.projectlombok:lombok:1.18.46")
     annotationProcessor("org.projectlombok:lombok:1.18.46")
 
-    // Source: https://mvnrepository.com/artifact/io.projectreactor/reactor-core
     implementation 'io.projectreactor:reactor-core:3.8.5'
+    testImplementation('io.projectreactor:reactor-test:3.8.5')
+
+    // Upgraded Mockito — must be recent enough to support -javaagent loading
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.14.2'
+    mockitoAgent 'org.mockito:mockito-core:5.14.2'
 
     implementation 'org.fusesource.jansi:jansi:2.4.0'
     implementation 'org.apache.logging.log4j:log4j-api:3.0.0-alpha1'
@@ -26,6 +36,7 @@ dependencies {
     //implementation 'org.apache.logging.log4j:log4j-to-slf4j:3.0.0-alpha1'
 }
 
-test {
+tasks.named('test', Test) {
     useJUnitPlatform()
+    jvmArgs "-javaagent:${configurations.mockitoAgent.asPath}"
 }

@@ -14,7 +14,10 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.retry.Retry;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,8 +41,10 @@ public class NotificationSystem {
     private final ConcurrentMap<String, NotificationEvent> notificationCache;
 
     public NotificationSystem(){
+
         this.mainEventSink = Sinks.many().multicast().onBackpressureBuffer();
         this.historySink = Sinks.many().replay().limit(50);
+
         this.teamsSink = Sinks.one();
         this.emailSink = Sinks.one();
         this.phoneSink = Sinks.one();
@@ -52,13 +57,105 @@ public class NotificationSystem {
         this.setUpProcessingFlows();
 
     }
+    public NotificationSystem(
+            NotificationService teamsService,
+            NotificationService emailService,
+            NotificationService phoneService) {
+        this.mainEventSink = Sinks.many().multicast().onBackpressureBuffer();
+        this.historySink = Sinks.many().replay().limit(50);
+
+        this.teamsSink = Sinks.one();
+        this.emailSink = Sinks.one();
+        this.phoneSink = Sinks.one();
+
+        this.teamsService = teamsService;
+        this.emailService = emailService;
+        this.phoneService = phoneService;
+
+        this.notificationCache = new ConcurrentHashMap<>();
+
+        setUpProcessingFlows();
+    }
+
+    private void setUpProcessingFlows(){
+        this.mainEventSink
+                .asFlux()
+                .doOnNext(event -> log.info("Received new event: {}" ,event))
+                .doOnNext(this::UpdateEventStatus)
+                .doOnNext(this.historySink::tryEmitNext)
+                .subscribe(this::routeEventByPriority);
+
+        this.setupTeamsProcessor();
+        this.setupPhoneProcessor();
+        this.setupEmailProcessor();
+    }
+
+    private void setupTeamsProcessor() {
+        this.teamsSink
+                .asMono()
+                .flatMap(event ->
+                        this.teamsService.sendNotification(event)
+                                .subscribeOn(Schedulers.boundedElastic())
+                                .doOnSuccess(success -> this.updateSuccessfullEvent(event, TEAMS_CHANEL))
+                                .doOnError(error -> this.updateErrorStatus(event, TEAMS_CHANEL, error))
+                                .onErrorResume(error -> Mono.just(false))
+                ).subscribe();
+    }
+
+    private void setupEmailProcessor() {
+        this.emailSink
+                .asMono()
+                .flatMap(event ->
+                        this.emailService.sendNotification(event)
+                                .subscribeOn(Schedulers.boundedElastic())
+                                .doOnSuccess(success -> this.updateSuccessfullEvent(event, EMAIL_CHANEL))
+                                .doOnError(error -> this.updateErrorStatus(event, EMAIL_CHANEL, error))
+                                .onErrorResume(error -> Mono.just(false))
+                ).subscribe();
+    }
+
+    private void setupPhoneProcessor() {
+        this.phoneSink
+                .asMono()
+                .flatMap(event ->
+                        Mono.defer(() -> this.phoneService.sendNotification(event))
+                                .subscribeOn(Schedulers.boundedElastic())
+                                .retryWhen(Retry.fixedDelay(3, Duration.ofMillis(100)))
+                                .doOnSuccess(success -> this.updateSuccessfullEvent(event, PHONE_CHANEL))
+                                .doOnError(error -> this.updateErrorStatus(event, PHONE_CHANEL, error))
+                                .onErrorResume(error -> Mono.just(false))
+                ).subscribe();
+    }
+
+
+    private NotificationEvent createTestEvent(Priority priority) {
+        return NotificationEvent.builder()
+                .id(UUID.randomUUID().toString())
+                .source("TEST")
+                .message("Test msg with priority: " + priority.toString())
+                .priority(priority)
+                .timeStamp(LocalDateTime.now())
+                .status(NotificationStatus.PENDING)
+                .build();
+    }
+    private void sleep(long mills) {
+        try {
+            Thread.sleep(mills);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
 
     private void UpdateEventStatus(NotificationEvent event){
-        if(Objects.isNull(event.getStatus())){
+        if (Objects.isNull(event.getStatus())) {
             event.setId(UUID.randomUUID().toString());
-            event.setStatus(NotificationStatus.PENDING);
-            this.notificationCache.put(event.getId(), event);
         }
+
+        if (Objects.isNull(event.getStatus())) {
+            event.setStatus(NotificationStatus.PENDING);
+        }
+
+        this.notificationCache.put(event.getId(), event);
     }
     private void updateSuccessfullEvent(NotificationEvent event, String chanel){
         log.info("Success event  by: {}, event: {}",chanel, event.getId());
@@ -78,63 +175,14 @@ public class NotificationSystem {
         }
     }
 
-    private void setUpProcessingFlows(){
-        this.mainEventSink
-                .asFlux()
-                .doOnNext(event -> log.info("Received new event: {}" ,event))
-                .doOnNext(this::UpdateEventStatus)
-                .doOnNext(event -> this.historySink.tryEmitNext(event))
-                .subscribe(this::routeEventByPriority);
-        this.setupTeamsProcessor();
-        this.setupPhoneProcessor();
-    }
 
-    private void setupTeamsProcessor() {
-        this.teamsSink
-                .asMono()
-                .repeat()
-                .flatMap(event ->
-                        this.teamsService.sendNotification(event)
-                                .subscribeOn(Schedulers.boundedElastic())
-                                .doOnSuccess(success -> this.updateSuccessfullEvent(event, TEAMS_CHANEL))
-                                .doOnError(error -> this.updateErrorStatus(event, TEAMS_CHANEL, error))
-                                .onErrorResume(error -> Mono.just(false))
-                ).subscribe();
-    }
-
-    private void setupEmailProcessor() {
-        this.teamsSink
-                .asMono()
-                .repeat()
-                .flatMap(event ->
-                        this.emailService.sendNotification(event)
-                                .subscribeOn(Schedulers.boundedElastic())
-                                .doOnSuccess(success -> this.updateSuccessfullEvent(event, EMAIL_CHANEL))
-                                .doOnError(error -> this.updateErrorStatus(event, EMAIL_CHANEL, error))
-                                .onErrorResume(error -> Mono.just(false))
-                ).subscribe();
-    }
-
-    private void setupPhoneProcessor() {
-        this.teamsSink
-                .asMono()
-                .repeat()
-                .flatMap(event ->
-                        this.phoneService.sendNotification(event)
-                                .subscribeOn(Schedulers.boundedElastic())
-                                .doOnSuccess(success -> this.updateSuccessfullEvent(event, PHONE_CHANEL))
-                                .doOnError(error -> this.updateErrorStatus(event, PHONE_CHANEL, error))
-                                .retry(3)
-                                .onErrorResume(error -> Mono.just(false))
-                ).subscribe();
-    }
 
     private void routeEventByPriority(NotificationEvent event){
         this.teamsSink.tryEmitValue(event);
-        if (event.getPriority() == Priority.HIHGH || event.getPriority() == Priority.MEDIUM){
+        if (event.getPriority() == Priority.HIGH || event.getPriority() == Priority.MEDIUM){
             this.emailSink.tryEmitValue(event);
         }
-        if (event.getPriority() == Priority.HIHGH){
+        if (event.getPriority() == Priority.HIGH){
             this.phoneSink.tryEmitValue(event);
         }
     }

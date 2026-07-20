@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.mart.notification_system.NotificationSystemTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-07-20T03:51:58" hostname="Mac-mini-de-Gabo.local" time="5.573">
+  <properties/>
+  <testcase name="How to use virtual time" classname="com.mart.notification_system.NotificationSystemTest" time="5.573"/>
+  <system-out><![CDATA[21:52:03.752 [Test worker] ?[34mDEBUG?[m reactor.util.Loggers - Using Slf4j logging framework
+21:52:03.796 [Test worker] ?[32mINFO ?[m com.marte.notification_system.NotificationSystem - Received new event: NotificationEvent(id=3663220e-6488-4b4d-8a82-ea03d41829d8, source=TEST, message=Test msg with priority: HIGH, priority=HIGH, timeStamp=2026-07-19T21:52:03.793162, status=PENDING)
+21:52:03.806 [Test worker] ?[32mINFO ?[m com.marte.notification_system.NotificationSystem - Success event  by: Teams, event: 3663220e-6488-4b4d-8a82-ea03d41829d8
+21:52:03.806 [Test worker] ?[32mINFO ?[m com.marte.notification_system.NotificationSystem - Success event  by: Email, event: 3663220e-6488-4b4d-8a82-ea03d41829d8
+21:52:03.807 [Test worker] ?[32mINFO ?[m com.marte.notification_system.NotificationSystem - Success event  by: Phone, event: 3663220e-6488-4b4d-8a82-ea03d41829d8
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
